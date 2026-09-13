@@ -1,0 +1,578 @@
+[
+  {
+    "key": "first_author",
+    "label": "First Author",
+    "category": "1. Study Details",
+    "description": "Extract only the surname of the first author.",
+    "field_type": "text",
+    "order_index": 101
+  },
+  {
+    "key": "publication_year",
+    "label": "Year of Publication",
+    "category": "1. Study Details",
+    "description": "Extract the four-digit calendar year the study was published.",
+    "field_type": "text",
+    "order_index": 102
+  },
+  {
+    "key": "doi",
+    "label": "DOI",
+    "category": "1. Study Details",
+    "description": "Extract the permanent Digital Object Identifier string.",
+    "field_type": "text",
+    "order_index": 103
+  },
+  {
+    "key": "journal_name",
+    "label": "Journal Name",
+    "category": "1. Study Details",
+    "description": "Extract the full official name of the publishing journal.",
+    "field_type": "text",
+    "order_index": 104
+  },
+  {
+    "key": "title",
+    "label": "Title",
+    "category": "1. Study Details",
+    "description": "Extract the full formal title of the study.",
+    "field_type": "text",
+    "order_index": 105
+  },
+  {
+    "key": "study_type",
+    "label": "Type of Study",
+    "category": "2. Study Design",
+    "description": "Extract the author's stated study design",
+    "field_type": "text",
+    "order_index": 201
+  },
+  {
+    "key": "main_ai_use",
+    "label": "Main AI Use",
+    "category": "2. Study Design",
+    "description": "Classify the primary operational role of AI in the workflow. Suggested classes: Triage / Pre-read Prioritization, Independent Reader / Autonomous Filter, Second Reader in Double Reading, Concurrent Decision Support / CAD, Reader Arbitration / Tie-Breaker, Standalone Diagnostic Evaluation, or other.",
+    "field_type": "text",
+    "order_index": 202
+  },
+  {
+    "key": "ai_task",
+    "label": "Task",
+    "category": "2. Study Design",
+    "description": "Classify the computational task performed by AI. Suggested classes: Binary Classification (Normal vs Abnormal), Multi-class Classification, Risk Stratification / Score, Detection / Lesion Localisation, Segmentation, BI-RADS Category Assignment, or other.",
+    "field_type": "text",
+    "order_index": 203
+  },
+  {
+    "key": "clinical_care_setting",
+    "label": "Clinical Care Setting",
+    "category": "2. Study Design",
+    "description": "Describe the clinical environment where the study was conducted. Suggested classes: Population-based Asymptomatic Screening, Symptomatic Assessment Clinic, Rapid Diagnostic Unit, High-Risk Surveillance, Mixed / Outpatient Clinic, or other.",
+    "field_type": "text",
+    "order_index": 204
+  },
+  {
+    "key": "center_structure",
+    "label": "Centre Structure",
+    "category": "2. Study Design",
+    "description": "Extract whether single-centre or multi-centre, including the count and types of sites. Suggested classes: Single-centre or Multi-centre and exact count.",
+    "field_type": "text",
+    "order_index": 205
+  },
+  {
+    "key": "external_validation",
+    "label": "External Validation",
+    "category": "2. Study Design",
+    "description": "Extract whether the AI system was validated on an external independent cohort.",
+    "field_type": "text",
+    "order_index": 206
+  },
+  {
+    "key": "total_cases",
+    "label": "Number of Cases",
+    "category": "3. Study Population",
+    "description": "Extract the total count of distinct patients.",
+    "field_type": "text",
+    "order_index": 301
+  },
+  {
+    "key": "number_of_images_or_videos",
+    "label": "Number of Images/Videos",
+    "category": "3. Study Population",
+    "description": "Extract the total number of distinct images, projections (e.g. 2-view, 4-view), slices, or video recordings evaluated.",
+    "field_type": "text",
+    "order_index": 302
+  },
+  {
+    "key": "number_of_normal_or_benign",
+    "label": "Number of Normal/Benign",
+    "category": "3. Study Population",
+    "description": "Extract the count of confirmed benign, normal, or disease-negative cases.",
+    "field_type": "text",
+    "order_index": 303
+  },
+  {
+    "key": "number_of_malignant",
+    "label": "Number of Malignant",
+    "category": "3. Study Population",
+    "description": "Extract the count of confirmed malignant/cancer cases in the cohort.",
+    "field_type": "text",
+    "order_index": 304
+  },
+  {
+    "key": "participant_age",
+    "label": "Age (Range, Median, Average)",
+    "category": "3. Study Population",
+    "description": "Extract reported participant age metrics (mean, standard deviation, median, IQR, or range).",
+    "field_type": "text",
+    "order_index": 305
+  },
+  {
+    "key": "lesion_size",
+    "label": "Lesion Size (Range, Median, Average)",
+    "category": "3. Study Population",
+    "description": "Extract reported pathological or radiological tumor/lesion sizes (mean, median, range in mm or cm).",
+    "field_type": "text",
+    "order_index": 306
+  },
+  {
+    "key": "density_measure",
+    "label": "Density Measure",
+    "category": "3. Study Population",
+    "description": "Extract the breast density classification system and distribution across the cohort. Suggested classes: BI-RADS Density (A/B/C/D), Dense vs Fatty / Non-dense, Quantra / Volpara Automated Metric, Percentage Density, Not Reported, or other.",
+    "field_type": "text",
+    "order_index": 307
+  },
+  {
+    "key": "ethnicity",
+    "label": "Ethnicity",
+    "category": "3. Study Population",
+    "description": "Extract demographic breakdown of race, ethnicity, or genetic ancestry, or state if not reported.",
+    "field_type": "text",
+    "order_index": 308
+  },
+  {
+    "key": "recruitment_dates",
+    "label": "Recruitment Dates",
+    "category": "3. Study Population",
+    "description": "Extract the exact start and end dates or date range during which patients were enrolled or images were captured.",
+    "field_type": "text",
+    "order_index": 309
+  },
+  {
+    "key": "country",
+    "label": "Country",
+    "category": "3. Study Population",
+    "description": "Extract the country, countries, or geographic jurisdictions where clinical recruitment or data collection occurred.",
+    "field_type": "text",
+    "order_index": 310
+  },
+  {
+    "key": "inclusion_criteria",
+    "label": "Inclusion Criteria",
+    "category": "3. Study Population",
+    "description": "Extract the verbatim or direct list of patient/examination inclusion criteria detailing eligibility.",
+    "field_type": "text",
+    "order_index": 311
+  },
+  {
+    "key": "exclusion_criteria",
+    "label": "Exclusion Criteria",
+    "category": "3. Study Population",
+    "description": "Extract the verbatim or direct list of patient/examination exclusion criteria.",
+    "field_type": "text",
+    "order_index": 312
+  },
+  {
+    "key": "cohort_selection_type",
+    "label": "Selected Cases / Consecutive Cohort",
+    "category": "3. Study Population",
+    "description": "Classify the cohort sampling method. Suggested classes: Consecutive Cohort, Random Sample, Enriched / Case-Control Sample, Convenience Sample, Retrospective Filtered Sample, or other.",
+    "field_type": "text",
+    "order_index": 313
+  },
+  {
+    "key": "negative_reference_standard",
+    "label": "Benign/Normal (Negative)",
+    "category": "4. Reference Standard",
+    "description": "Extract the criteria used to definitively establish benign or normal status (e.g. biopsy, consensus, 1-year follow-up, 2-year cancer registry linkage).",
+    "field_type": "text",
+    "order_index": 401
+  },
+  {
+    "key": "positive_reference_standard",
+    "label": "Malignant (Positive)",
+    "category": "4. Reference Standard",
+    "description": "Extract the criteria used to definitively verify breast cancer malignancy (e.g. histopathological verification from core-needle biopsy or surgical resection).",
+    "field_type": "text",
+    "order_index": 402
+  },
+  {
+    "key": "tumor_type_distribution",
+    "label": "Number/Distribution of Tumour Types",
+    "category": "4. Reference Standard",
+    "description": "Extract counts, proportions, or descriptive breakdown of tumor histopathology (e.g. invasive ductal carcinoma, invasive lobular, DCIS, grade, receptor subtypes).",
+    "field_type": "text",
+    "order_index": 403
+  },
+  {
+    "key": "followup_duration",
+    "label": "Follow-up Duration",
+    "category": "4. Reference Standard",
+    "description": "Extract the explicit follow-up duration (in months or years) used to confirm reference standard or monitor interval cancers.",
+    "field_type": "text",
+    "order_index": 404
+  },
+  {
+    "key": "imaging_modality",
+    "label": "Modality",
+    "category": "5. Imaging Data & Hardware",
+    "description": "Classify breast imaging modality examined in the study. Suggested classes: 2D Full-Field Digital Mammography (FFDM), Digital Breast Tomosynthesis (DBT / 3D), Handheld Ultrasound (HHUS), Automated Breast Ultrasound (ABUS), Dynamic Contrast-Enhanced MRI (DCE-MRI), Whole-Slide Digital Pathology, Contrast-Enhanced Mammography (CEM), Multimodal / Combination, or other.",
+    "field_type": "text",
+    "order_index": 501
+  },
+  {
+    "key": "scanner_and_vendor_specs",
+    "label": "Scanner & Vendor Specs",
+    "category": "5. Imaging Data & Hardware",
+    "description": "Extract hardware manufacturers, specific scanner models, detector types, and acquisition parameters across participating sites.",
+    "field_type": "text",
+    "order_index": 502
+  },
+  {
+    "key": "image_type",
+    "label": "Image Type",
+    "category": "5. Imaging Data & Hardware",
+    "description": "Extract format and image representation. Suggested classes: Processed / 'For Presentation' DICOM, Raw / 'For Processing' DICOM, Screen captures / JPEGs, Volumetric reconstructions, or other.",
+    "field_type": "text",
+    "order_index": 503
+  },
+  {
+    "key": "data_split_partitioning",
+    "label": "Data Split Partitioning (Randomisation)",
+    "category": "5. Imaging Data & Hardware",
+    "description": "Describe train/tune/test data partitioning, patient-level leakage prevention, and randomization method.",
+    "field_type": "text",
+    "order_index": 504
+  },
+  {
+    "key": "ai_name_and_version",
+    "label": "Name, Version",
+    "category": "6. AI System",
+    "description": "Extract the software trade name and algorithm release/version.",
+    "field_type": "text",
+    "order_index": 601
+  },
+  {
+    "key": "ai_vendor",
+    "label": "Vendor",
+    "category": "6. AI System",
+    "description": "Extract the developing entity (commercial company, startup, or academic research laboratory).",
+    "field_type": "text",
+    "order_index": 602
+  },
+  {
+    "key": "ai_technique_architecture",
+    "label": "AI Technique / Architecture",
+    "category": "6. AI System",
+    "description": "Extract the deep learning / AI architecture (e.g. CNN, ResNet, Vision Transformer (ViT), Ensemble, Foundation Model, U-Net).",
+    "field_type": "text",
+    "order_index": 603
+  },
+  {
+    "key": "threshold_set",
+    "label": "Threshold Set",
+    "category": "6. AI System",
+    "description": "Extract the numerical cut-off score, classification threshold, or operating score applied.",
+    "field_type": "text",
+    "order_index": 604
+  },
+  {
+    "key": "threshold_determination",
+    "label": "Threshold Determination",
+    "category": "6. AI System",
+    "description": "Describe how the decision threshold was established. Suggested classes: Pre-specified / Manufacturer Fixed, Calibrated on Independent Tuning Set, Post-hoc Selected on Evaluation Set (Overfitting Risk), Operating Point Matching Clinician Sensitivity/Specificity, or other.",
+    "field_type": "text",
+    "order_index": 605
+  },
+  {
+    "key": "data_used_for_training",
+    "label": "Data Used for AI Training",
+    "category": "6. AI System",
+    "description": "Extract details regarding datasets, case numbers, and populations used to train and optimize the AI model.",
+    "field_type": "text",
+    "order_index": 606
+  },
+  {
+    "key": "commercial_availability",
+    "label": "Commercial Availability",
+    "category": "6. AI System",
+    "description": "Classify the commercial status of the software. Suggested classes: Commercially Available Product, CE-marked / FDA-cleared Commercial System, Research Prototype / In-House Model, Open-Source Model, or other.",
+    "field_type": "text",
+    "order_index": 607
+  },
+  {
+    "key": "regulatory_approval",
+    "label": "Regulatory Approval",
+    "category": "6. AI System",
+    "description": "Extract regulatory authorizations held by the software. Suggested classes: FDA 510(k) Cleared, FDA PMA Approved, CE Mark (EU MDR/MDD), PMDA Approved, Investigational Use Only (IUO), No Regulatory Clearance, or other.",
+    "field_type": "text",
+    "order_index": 608
+  },
+  {
+    "key": "ai_explainability",
+    "label": "Explainability",
+    "category": "6. AI System",
+    "description": "Extract explainability or visualization output offered to clinicians (e.g. heatmap, bounding box, attention map, suspicion score, BI-RADS-like score, none).",
+    "field_type": "text",
+    "order_index": 609
+  },
+  {
+    "key": "code_availability",
+    "label": "Code Availability",
+    "category": "6. AI System",
+    "description": "Extract whether model weights or source code are publicly accessible. Suggested classes: Publicly Available on GitHub/Repository, Available Upon Reasonable Request, Proprietary / Closed Source, Model Weights Shared on HuggingFace, or other.",
+    "field_type": "text",
+    "order_index": 610
+  },
+  {
+    "key": "number_of_readers",
+    "label": "Number of Readers",
+    "category": "7. Clinical Comparator & Readers",
+    "description": "Extract the total number of medical practitioners / radiologists reading cases in the study.",
+    "field_type": "text",
+    "order_index": 701
+  },
+  {
+    "key": "readers_experience_qualifications",
+    "label": "Readers Experience & Qualifications",
+    "category": "7. Clinical Comparator & Readers",
+    "description": "Extract training background, credentials, breast subspecialty status, years of clinical experience, or annual reading volume.",
+    "field_type": "text",
+    "order_index": 702
+  },
+  {
+    "key": "reading_regime",
+    "label": "Single, Double, Multireader",
+    "category": "7. Clinical Comparator & Readers",
+    "description": "Classify clinical reading paradigm. Suggested classes: Single Reading, Double Reading with Consensus, Independent Double Reading with Arbitration, Multi-reader (MRMC panel), Triple Reading, or other.",
+    "field_type": "text",
+    "order_index": 703
+  },
+  {
+    "key": "readers_per_case",
+    "label": "Number of Readers for Each Case",
+    "category": "7. Clinical Comparator & Readers",
+    "description": "Extract how many distinct clinicians interpreted each individual patient case.",
+    "field_type": "text",
+    "order_index": 704
+  },
+  {
+    "key": "comparator_settings",
+    "label": "Settings (Comparator Arms)",
+    "category": "7. Clinical Comparator & Readers",
+    "description": "Classify comparison arm setup. Suggested classes: Standalone AI vs. Unaided Clinician, AI-Assisted Clinician vs. Unaided Clinician, Standalone AI vs. AI-Assisted Clinician, AI as First Reader vs. Standard Double Reading, AI as Second Reader vs. Human Second Reader, or other.",
+    "field_type": "text",
+    "order_index": 705
+  },
+  {
+    "key": "information_available_to_readers",
+    "label": "Information Available to Readers",
+    "category": "7. Clinical Comparator & Readers",
+    "description": "Describe clinical context provided to readers (e.g. prior mammograms, age, family history, symptoms, or blinded to all history).",
+    "field_type": "text",
+    "order_index": 706
+  },
+  {
+    "key": "discrepancy_handling",
+    "label": "How Are Discrepancies Handled",
+    "category": "7. Clinical Comparator & Readers",
+    "description": "Describe conflict resolution when readers disagree (e.g. third senior arbitrator, consensus meeting, highest suspicion score).",
+    "field_type": "text",
+    "order_index": 707
+  },
+  {
+    "key": "scoring_method",
+    "label": "Scoring Method Used, Version",
+    "category": "7. Clinical Comparator & Readers",
+    "description": "Extract the scoring system used by readers and AI (e.g. BI-RADS 1-5, continuous 0-100 probability of malignancy, Likert scale).",
+    "field_type": "text",
+    "order_index": 708
+  },
+  {
+    "key": "sensitivity",
+    "label": "Sensitivity (CI)",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract reported sensitivity with 95% confidence intervals across comparator settings (AI standalone, reader alone, AI + reader).",
+    "field_type": "text",
+    "order_index": 801
+  },
+  {
+    "key": "specificity",
+    "label": "Specificity (CI)",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract reported specificity with 95% confidence intervals across comparator settings (AI, reader alone, AI + reader).",
+    "field_type": "text",
+    "order_index": 802
+  },
+  {
+    "key": "auroc",
+    "label": "AUROC / AUC (CI)",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract Area Under the ROC Curve (AUROC / AUC) with 95% confidence intervals across comparator arms (AI vs. readers vs. combined).",
+    "field_type": "text",
+    "order_index": 803
+  },
+  {
+    "key": "recall_rate",
+    "label": "Recall",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract patient recall rate (or recall percentage) for AI, readers, and combined workflow.",
+    "field_type": "text",
+    "order_index": 804
+  },
+  {
+    "key": "cancer_detection_rate",
+    "label": "Detection Rate",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract cancer detection rate (CDR, e.g. cancers detected per 1,000 screened women) across evaluated arms.",
+    "field_type": "text",
+    "order_index": 805
+  },
+  {
+    "key": "positive_predictive_value",
+    "label": "PPV",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract Positive Predictive Value (PPV1, PPV2, or PPV3) across comparator settings.",
+    "field_type": "text",
+    "order_index": 806
+  },
+  {
+    "key": "negative_predictive_value",
+    "label": "NPV",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract Negative Predictive Value (NPV) across comparator settings.",
+    "field_type": "text",
+    "order_index": 807
+  },
+  {
+    "key": "workload_efficiency_impact",
+    "label": "Workload Efficiency Impact",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract quantitative reduction in reading workload or screening burden.",
+    "field_type": "text",
+    "order_index": 808
+  },
+  {
+    "key": "reading_time_reduction",
+    "label": "Reading Time Reduction",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract impact on reader interpretation time (seconds per case or percentage reduction in time per exam).",
+    "field_type": "text",
+    "order_index": 809
+  },
+  {
+    "key": "arbitration_volume",
+    "label": "Arbitration Volume",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract the number, proportion, or change in cases requiring consensus arbitration or third-reader review.",
+    "field_type": "text",
+    "order_index": 810
+  },
+  {
+    "key": "reads_averted",
+    "label": "Reads Averted",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract the proportion or count of human reads averted (e.g. through AI autonomous rule-out of normal exams).",
+    "field_type": "text",
+    "order_index": 811
+  },
+  {
+    "key": "downstream_clinical_outcomes",
+    "label": "Downstream Clinical Outcome",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract patient-relevant downstream outcomes (e.g. benign biopsies avoided, stage distribution shift, interval cancer rates, delayed diagnoses).",
+    "field_type": "text",
+    "order_index": 812
+  },
+  {
+    "key": "economic_analysis",
+    "label": "Economic Analysis",
+    "category": "8. Performance & Endpoints",
+    "description": "Extract any formal health economic findings, cost-effectiveness analysis, ICER, or cost savings.",
+    "field_type": "text",
+    "order_index": 813
+  },
+  {
+    "key": "funding",
+    "label": "Funding",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract funding sources, government research grants (e.g. NIH, Horizon), or commercial sponsorship.",
+    "field_type": "text",
+    "order_index": 901
+  },
+  {
+    "key": "affiliations",
+    "label": "Affiliations",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract institutional affiliations and academic/clinical departments of study authors.",
+    "field_type": "text",
+    "order_index": 902
+  },
+  {
+    "key": "conflicts_of_interest",
+    "label": "Conflict of Interests",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract author disclosures regarding financial conflicts, stock ownership, advisory roles, or patents with AI companies.",
+    "field_type": "text",
+    "order_index": 903
+  },
+  {
+    "key": "regulatory_aspects",
+    "label": "Regulatory Aspects",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract discussions or statements regarding regulatory clearance, software medical device classification (SaMD), or compliance barriers.",
+    "field_type": "text",
+    "order_index": 904
+  },
+  {
+    "key": "reported_limitations",
+    "label": "Reported Limitations",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract the primary limitations, confounding factors, and methodological caveats stated by the authors.",
+    "field_type": "text",
+    "order_index": 905
+  },
+  {
+    "key": "reported_guideline_adherence",
+    "label": "Reported Guideline Adherence",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract adherence to reporting standards. Suggested classes: STARD-AI, TRIPOD-AI / TRIPOD+AI, CONSORT-AI, SPIRIT-AI, CLAIM, DECIDE-AI, QUADAS-2, None Reported, or other.",
+    "field_type": "text",
+    "order_index": 906
+  },
+  {
+    "key": "trial_registration",
+    "label": "Trial Registration",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract prospective clinical trial registry identifier (e.g. ClinicalTrials.gov NCT number, ISRCTN, DRKS).",
+    "field_type": "text",
+    "order_index": 907
+  },
+  {
+    "key": "automation_bias_reader_behavior",
+    "label": "Automation Bias Reader Behaviour",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract observations on clinician cognitive bias, automation bias, anchoring on AI alerts, dismissals of true positives, or over-reliance on false alarms.",
+    "field_type": "text",
+    "order_index": 908
+  },
+  {
+    "key": "technical_failures",
+    "label": "Technical Failures",
+    "category": "9. Compliance & Regulatory",
+    "description": "Extract reported counts, percentages, or descriptions of exams rejected or failing AI processing due to software bugs, image artifacts, DICOM corruption, or anatomical variances.",
+    "field_type": "text",
+    "order_index": 909
+  }
+]
