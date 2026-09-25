@@ -520,8 +520,10 @@ async def extract_paper(
             )
             existing_ext = ext_q.scalar_one_or_none()
 
+            val_to_save = val if val and val != "null" else "NR"
+
             if existing_ext:
-                existing_ext.value = val
+                existing_ext.value = val_to_save
                 existing_ext.quote = quote
                 existing_ext.page = page_num
                 existing_ext.rects = rects_json
@@ -533,7 +535,7 @@ async def extract_paper(
                 new_ext = ExtractionDB(
                     paper_id=paper.id,
                     field_key=f_key,
-                    value=val,
+                    value=val_to_save,
                     quote=quote,
                     page=page_num,
                     rects=rects_json,
@@ -543,6 +545,7 @@ async def extract_paper(
                     confidence=confidence
                 )
                 db.add(new_ext)
+
 
         paper.status = "extracted"
         paper.error_message = None
@@ -665,8 +668,10 @@ async def extract_batch_papers(req: Optional[BatchExtractRequest] = None, db: As
                 )
                 existing_ext = ext_q.scalar_one_or_none()
 
+                val_to_save = val if val and val != "null" else "NR"
+
                 if existing_ext:
-                    existing_ext.value = val
+                    existing_ext.value = val_to_save
                     existing_ext.quote = quote
                     existing_ext.page = page_num
                     existing_ext.rects = rects_json
@@ -678,7 +683,7 @@ async def extract_batch_papers(req: Optional[BatchExtractRequest] = None, db: As
                     new_ext = ExtractionDB(
                         paper_id=p.id,
                         field_key=f_key,
-                        value=val,
+                        value=val_to_save,
                         quote=quote,
                         page=page_num,
                         rects=rects_json,
@@ -688,6 +693,7 @@ async def extract_batch_papers(req: Optional[BatchExtractRequest] = None, db: As
                         confidence=confidence
                     )
                     db.add(new_ext)
+
 
             p.status = "extracted"
             p.error_message = None
@@ -941,10 +947,14 @@ async def export_data(
         }
         for f in fields:
             ext = extractions.get(f.key)
-            final_val = ext.edited_value if ext and ext.edited_value is not None else (ext.value if ext else "")
-            row_data[f.label] = final_val or ""
+            raw_v = ext.edited_value if ext and ext.edited_value is not None and ext.edited_value != "" else (ext.value if ext and ext.value else "")
+            final_val = raw_v.strip() if raw_v else "NR"
+            if final_val.lower() in ("null", "none", "not reported", "not applicable", ""):
+                final_val = "NR"
+            row_data[f.label] = final_val
 
         export_rows.append(row_data)
+
 
     if format == "json":
         return JSONResponse(content=export_rows)

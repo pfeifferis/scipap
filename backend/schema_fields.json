@@ -427,10 +427,11 @@
     "key": "recall_rate",
     "label": "Recall",
     "category": "8. Performance & Endpoints",
-    "description": "Extract patient recall rate (or recall percentage) for AI, readers, and combined workflow.",
+    "description": "Extract patient recall metrics (recall rate, percentage, absolute counts/proportions of recalled patients/cancers, or concordance/discordance in recall decisions between AI and readers, or ML sensitivity/recall).",
     "field_type": "text",
     "order_index": 804
   },
+
   {
     "key": "cancer_detection_rate",
     "label": "Detection Rate",

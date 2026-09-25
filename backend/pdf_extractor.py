@@ -33,17 +33,30 @@ def extract_text_for_llm(pdf_path: str, max_pages: int = 60) -> str:
     can cite exact pages and verbatim quotes.
     """
     doc = fitz.open(pdf_path)
+    metadata = doc.metadata or {}
     formatted_pages = []
     
+    # Prepend document metadata if available to assist with title and author extraction
+    meta_header = []
+    if metadata.get("title") and len(metadata["title"].strip()) > 3:
+        meta_header.append(f"Document Title: {metadata['title'].strip()}")
+    if metadata.get("author") and len(metadata["author"].strip()) > 2:
+        meta_header.append(f"Document Author: {metadata['author'].strip()}")
+    
+    meta_prefix = ("\n".join(meta_header) + "\n\n") if meta_header else ""
+
     total_pages = min(len(doc), max_pages)
     for i in range(total_pages):
         page = doc[i]
         text = page.get_text("text")
         cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text).strip()
+        if i == 0 and meta_prefix:
+            cleaned_text = meta_prefix + cleaned_text
         formatted_pages.append(f"=== [PAGE {i + 1}] ===\n{cleaned_text}")
         
     doc.close()
     return "\n\n".join(formatted_pages)
+
 
 
 def _merge_word_rects_by_line(word_items: List[Tuple[float, float, float, float, str, int, int, int]]) -> List[List[float]]:

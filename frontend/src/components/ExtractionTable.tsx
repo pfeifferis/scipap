@@ -215,7 +215,10 @@ export const ExtractionTable: React.FC<ExtractionTableProps> = ({
   };
 
   const totalActiveFields = fields.filter((f) => f.is_active !== false).length;
-  const extractedCount = extractions.filter((e) => (e.edited_value || e.value)).length;
+  const extractedCount = extractions.filter((e) => {
+    const val = (e.edited_value !== null && e.edited_value !== undefined && e.edited_value !== '' ? e.edited_value : (e.value || '')).trim().toUpperCase();
+    return val && val !== 'NR' && val !== 'NA' && val !== 'N/A' && val !== 'NULL' && val !== 'NOT REPORTED' && val !== 'NOT APPLICABLE';
+  }).length;
 
   return (
     <div className="h-full flex flex-col bg-slate-900 overflow-hidden select-text">
@@ -368,10 +371,21 @@ export const ExtractionTable: React.FC<ExtractionTableProps> = ({
                     <div className="divide-y divide-slate-800/50">
                       {catFields.map((field) => {
                         const ext = extractionMap.get(field.key);
-                        const displayValue = ext?.edited_value !== null && ext?.edited_value !== undefined 
+                        const rawVal = ext?.edited_value !== null && ext?.edited_value !== undefined 
                           ? ext.edited_value 
-                          : (ext?.value || '');
+                          : (ext?.value !== null && ext?.value !== undefined ? ext.value : '');
+                        const displayValue = rawVal.trim();
+                        const upper = displayValue.toUpperCase();
+                        
+                        // Strict distinction:
+                        // 1. isPending = field was not evaluated/extracted yet (null / empty / no ext object)
+                        // 2. isNR = LLM explicitly returned "NR", "NA", "N/A", "Not Reported", "Not Applicable"
+                        // 3. isExtracted = LLM extracted a concrete finding
+                        // 4. isEdited = investigator manual override
+                        const isPending = !ext || ext.value === null || ext.value === undefined || (rawVal === '' && (ext.edited_value === null || ext.edited_value === undefined));
+                        const isNR = !isPending && (upper === 'NR' || upper === 'NA' || upper === 'N/A' || upper === 'NOT REPORTED' || upper === 'NOT APPLICABLE');
                         const isEdited = ext?.edited_value !== null && ext?.edited_value !== undefined;
+                        const isExtracted = !isPending && !isNR && !isEdited;
                         const isCurrentHighlight = activeHighlight?.label === field.label;
                         const isEditing = editingId === ext?.id;
                         const citations = getCitations(ext);
@@ -401,7 +415,7 @@ export const ExtractionTable: React.FC<ExtractionTableProps> = ({
                                   </span>
                                 )}
 
-                                {displayValue && !isEdited && (
+                                {isExtracted && (
                                   <span className="text-[9px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded shrink-0">
                                     Extracted
                                   </span>
@@ -414,9 +428,15 @@ export const ExtractionTable: React.FC<ExtractionTableProps> = ({
                                   </span>
                                 )}
 
-                                {!displayValue && (
+                                {isNR && (
+                                  <span className="text-[9px] font-semibold text-slate-400 bg-slate-800/90 border border-slate-700/80 px-1.5 py-0.2 rounded shrink-0 font-mono">
+                                    {upper === 'NA' || upper === 'N/A' ? 'NA' : 'NR'}
+                                  </span>
+                                )}
+
+                                {isPending && (
                                   <span className="text-[9px] font-medium text-slate-500 bg-slate-800 px-1.5 py-0.2 rounded shrink-0">
-                                    Pending
+                                    Not Extracted
                                   </span>
                                 )}
                               </div>
@@ -495,14 +515,29 @@ export const ExtractionTable: React.FC<ExtractionTableProps> = ({
                               </div>
                             ) : (
                               <div
-                                onDoubleClick={() => ext && handleStartEdit(ext, displayValue)}
+                                onDoubleClick={() => ext && handleStartEdit(ext, isNR ? 'NR' : (isPending ? '' : displayValue))}
                                 className={`p-2.5 rounded-lg text-xs transition-colors ${
-                                  displayValue
+                                  isExtracted || isEdited
                                     ? 'bg-slate-950/60 text-slate-200 border border-slate-800/80 leading-relaxed'
-                                    : 'bg-slate-950/30 text-slate-500 italic border border-dashed border-slate-800'
+                                    : isNR
+                                    ? 'bg-slate-950/30 text-slate-400 border border-dashed border-slate-800/90'
+                                    : 'bg-slate-950/20 text-slate-500 italic border border-dashed border-slate-800/60'
                                 }`}
                               >
-                                {displayValue || 'Not extracted yet.'}
+                                {isExtracted || isEdited ? (
+                                  displayValue
+                                ) : isNR ? (
+                                  <span className="inline-flex items-center gap-1.5 text-slate-400">
+                                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono font-bold text-[11px] border border-slate-700">
+                                      {upper === 'NA' || upper === 'N/A' ? 'NA' : 'NR'}
+                                    </span>
+                                    <span className="text-[11px] text-slate-500 font-normal italic">
+                                      {upper === 'NA' || upper === 'N/A' ? '(Not Applicable in Study)' : '(Not Reported in Study)'}
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500 italic">Not yet extracted.</span>
+                                )}
                               </div>
                             )}
 

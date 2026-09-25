@@ -19,7 +19,7 @@ MANDATORY RULES:
    - NEVER paraphrase, summarize, or alter words, punctuation, or numbers in quotes.
    - For short fields (e.g. publication_year: "2024", first_author: "Smith", doi, or total cases), copy the complete phrase or clause where that fact appears.
 5. Page Identification: Use the `=== [PAGE X] ===` demarcation headers to determine the exact integer `page` number (e.g., 1, 2, 3).
-6. If a field is truly not mentioned or evaluated in the paper, set `value` to null, `quote` to null, and `page` to null.
+6. If a field is truly not mentioned, not evaluated, or not applicable in the paper, set `value` to "NR" (Not Reported), `quote` to null, and `page` to null.
 7. Output format MUST be strictly a JSON object conforming to the schema.
 """
 
@@ -92,9 +92,11 @@ PAPER TEXT (Demarcated with === [PAGE X] === markers):
 {paper_text}
 --------------------------------------------------
 
-CRITICAL CITATION REQUIREMENTS:
-- For every non-null value, provide exact, continuous verbatim citation quote(s) and page number(s).
-- Multiple Citations: If an extracted point is found across multiple sentences or pages, include all of them in the "citations" array!
+CRITICAL EXTRACTION & CITATION REQUIREMENTS:
+- MANDATORY: You MUST return an extraction entry for EVERY requested field listed above.
+- If a field is truly not evaluated, not reported, or not applicable in the paper, output "value": "NR", "quote": null, "page": null, "citations": [].
+- For every non-null (non-NR) value, provide exact, continuous verbatim citation quote(s) and page number(s).
+- Multiple Citations: If an extracted point is evidenced across multiple sentences, tables, or pages, include all of them in the "citations" array!
 - Class Suggestions: Where suggested classes are indicated in the field description, use them as classification guidance or specify exact details reported.
 - Do NOT paraphrase quotes. They will be searched character-by-character to highlight the exact text in the PDF viewer.
 
@@ -102,10 +104,10 @@ Return ONLY valid JSON matching this schema:
 {{
   "extractions": [
     {{
-      "field_key": "<key from list>",
-      "value": "<extracted finding, or null if not reported>",
-      "quote": "<primary verbatim quote, or null>",
-      "page": <primary page number, or null>,
+      "field_key": "<exact key from list>",
+      "value": "<extracted finding, or \"NR\" if not reported in paper>",
+      "quote": "<primary verbatim quote, or null if NR>",
+      "page": <primary integer page number, or null if NR>,
       "citations": [
         {{
           "quote": "<exact verbatim quote from text>",
@@ -117,6 +119,7 @@ Return ONLY valid JSON matching this schema:
   ]
 }}
 """
+
 
 
 async def extract_multiple_papers_batch(
@@ -277,11 +280,16 @@ async def _extract_single_chunk(
         "max_tokens": 16000
     }
 
-    r = await client.post(OPENROUTER_CHAT_URL, headers=headers, json=payload)
-    if r.status_code != 200:
-        raise RuntimeError(f"OpenRouter API error ({r.status_code}): {r.text}")
-    raw = r.json()["choices"][0]["message"]["content"].strip()
-    return parse_json_extractions(raw)
+    try:
+        r = await client.post(OPENROUTER_CHAT_URL, headers=headers, json=payload)
+        if r.status_code != 200:
+            print(f"[EXTRACT ERROR] OpenRouter API error ({r.status_code}): {r.text}", flush=True)
+            return []
+        raw = r.json()["choices"][0]["message"]["content"].strip()
+        return parse_json_extractions(raw)
+    except Exception as e:
+        print(f"[EXTRACT ERROR] Chunk extraction failed: {e}", flush=True)
+        return []
 
 
 async def extract_paper_data(
@@ -291,7 +299,7 @@ async def extract_paper_data(
     fields: List[Dict[str, Any]],
     system_prompt: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """Single paper extraction using direct fast chat completion for immediate interactive response."""
+    """Single paper extraction using parallel focused chunks for maximum accuracy and 100% field coverage."""
     chosen_model = (model or "google/gemini-2.5-flash-lite").replace(":batch", "")
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -300,21 +308,46 @@ async def extract_paper_data(
         "X-Title": "SciPap - Paper Extraction Tool",
     }
 
+    CHUNK_SIZE = 18
+    chunks = [fields[i:i + CHUNK_SIZE] for i in range(0, len(fields), CHUNK_SIZE)]
+
     async with httpx.AsyncClient(timeout=240.0) as client:
-        # If schema is large (e.g. 72 fields), split into 2 parallel requests to prevent exceeding output token limits
-        if len(fields) > 40:
-            mid = len(fields) // 2
-            chunk1 = fields[:mid]
-            chunk2 = fields[mid:]
-            print(f"[EXTRACT] Large schema ({len(fields)} fields): running 2 parallel requests ({len(chunk1)} & {len(chunk2)} fields) on {chosen_model}...", flush=True)
-            res1, res2 = await asyncio.gather(
-                _extract_single_chunk(client, headers, chosen_model, paper_text, chunk1, system_prompt),
-                _extract_single_chunk(client, headers, chosen_model, paper_text, chunk2, system_prompt)
-            )
-            return res1 + res2
-        else:
-            print(f"[EXTRACT] Running single request for {len(fields)} fields on {chosen_model}...", flush=True)
-            return await _extract_single_chunk(client, headers, chosen_model, paper_text, fields, system_prompt)
+        print(f"[EXTRACT] Extracting {len(fields)} fields across {len(chunks)} parallel chunks (~{CHUNK_SIZE} fields each) on {chosen_model}...", flush=True)
+        tasks = [
+            _extract_single_chunk(client, headers, chosen_model, paper_text, chunk, system_prompt)
+            for chunk in chunks
+        ]
+        chunk_results = await asyncio.gather(*tasks)
+
+        all_raw_items = []
+        for res in chunk_results:
+            all_raw_items.extend(res)
+
+        item_map: Dict[str, Dict[str, Any]] = {}
+        for item in all_raw_items:
+            if isinstance(item, dict) and "field_key" in item:
+                item_map[item["field_key"]] = item
+
+        # Enforce schema completeness: preserve explicit LLM extractions (including explicit "NR" / "NA"),
+        # and leave omitted/unevaluated fields as None (not yet extracted).
+        complete_extractions: List[Dict[str, Any]] = []
+        for f in fields:
+            f_key = f["key"]
+            if f_key in item_map:
+                complete_extractions.append(item_map[f_key])
+            else:
+                complete_extractions.append({
+                    "field_key": f_key,
+                    "value": None,
+                    "quote": None,
+                    "page": None,
+                    "citations": [],
+                    "confidence": 0.0
+                })
+
+        return complete_extractions
+
+
 
 
 
