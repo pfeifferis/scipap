@@ -14,38 +14,105 @@ Your mission is to extract structured variables from research papers and link EV
 MANDATORY RULES:
 1. Grounding Guarantee: For EVERY single field where `value` is extracted (not null), you MUST supply verbatim citation quote(s) and page number(s).
 2. Class Suggestions: Where "Suggested classes" are listed in a field's description, use them as guidance to classify accurately when applicable, or formulate a specific finding/value if the study reports different or more detailed information.
-3. Multiple Citations: When an extracted data point is evidenced across multiple sentences, paragraphs, tables, or pages (e.g., patient inclusion criteria, study design, or diagnostic endpoints across different settings), provide multiple citation objects in the `citations` array.
-4. Verbatim Fidelity: Every `quote` MUST be an exact character-for-character copy-paste of a continuous text snippet (between 5 and 30 consecutive words) directly from the text.
+3. Distribution Breakdown: For distribution breakdown fields (such as `density_measure` and `tumor_type_distribution`), ALWAYS extract the complete breakdown with both raw counts and percentage numbers in % (e.g. `BI-RADS A: 16 (20.3%), B: 44 (55.7%), C: 11 (13.9%), D: 3 (3.8%)` or `Invasive Ductal: 49 (84.5%), DCIS: 9 (15.5%)`). If percentages are reported in tables/text or easily computed from category totals, provide the exact `%`.
+4. Multiple Citations: When an extracted data point is evidenced across multiple sentences, paragraphs, tables, or pages (e.g., patient inclusion criteria, study design, or diagnostic endpoints across different settings), provide multiple citation objects in the `citations` array.
+5. Verbatim Fidelity: Every `quote` MUST be an exact character-for-character copy-paste of a continuous text snippet (between 5 and 30 consecutive words) directly from the text.
    - NEVER paraphrase, summarize, or alter words, punctuation, or numbers in quotes.
    - For short fields (e.g. publication_year: "2024", first_author: "Smith", doi, or total cases), copy the complete phrase or clause where that fact appears.
-5. Page Identification: Use the `=== [PAGE X] ===` demarcation headers to determine the exact integer `page` number (e.g., 1, 2, 3).
-6. If a field is truly not mentioned, not evaluated, or not applicable in the paper, set `value` to "NR" (Not Reported), `quote` to null, and `page` to null.
-7. Output format MUST be strictly a JSON object conforming to the schema.
+6. Page Identification: Use the `=== [PAGE X] ===` demarcation headers to determine the exact integer `page` number (e.g., 1, 2, 3).
+7. If a field is truly not mentioned, not evaluated, or not applicable in the paper, set `value` to "NR" (Not Reported), `quote` to null, and `page` to null.
+8. Output format MUST be strictly a JSON object conforming to the schema.
 """
 
+def fix_unescaped_newlines_in_json(s: str) -> str:
+    """Escapes raw literal unescaped newlines, tabs, and carriage returns that occur inside JSON string literals."""
+    res = []
+    in_string = False
+    escape = False
+    for ch in s:
+        if ch == "\\" and in_string:
+            escape = not escape
+            res.append(ch)
+            continue
+        elif ch == '"' and not escape:
+            in_string = not in_string
+            res.append(ch)
+        elif in_string and ch == "\n":
+            res.append("\\n")
+        elif in_string and ch == "\r":
+            res.append("\\r")
+        elif in_string and ch == "\t":
+            res.append("\\t")
+        else:
+            res.append(ch)
+        escape = False
+    return "".join(res)
+
+
+def extract_field_objects_regex(text: str) -> List[Dict[str, Any]]:
+    """Robust regex-based fallback to extract all field objects even if the outer JSON is malformed or unescaped."""
+    matches = []
+    keys = list(re.finditer(r'"field_key"\s*:\s*"([a-zA-Z0-9_]+)"', text))
+    for i, km in enumerate(keys):
+        k = km.group(1)
+        start_idx = text.rfind("{", 0, km.start())
+        if start_idx == -1:
+            continue
+        if i < len(keys) - 1:
+            next_start = text.rfind("{", 0, keys[i + 1].start())
+            block = text[start_idx:next_start].rstrip().rstrip(",")
+        else:
+            block = text[start_idx:text.rfind("}") + 1] if text.rfind("}") != -1 else text[start_idx:]
+
+        val_m = re.search(r'"value"\s*:\s*(?:"((?:[^"\\]|\\.)*)"|null|(true|false|[0-9.-]+))', block)
+        quote_m = re.search(r'"quote"\s*:\s*(?:"((?:[^"\\]|\\.)*)"|null)', block)
+        page_m = re.search(r'"page"\s*:\s*(\d+|null)', block)
+        conf_m = re.search(r'"confidence"\s*:\s*([0-9.]+|null)', block)
+
+        val = val_m.group(1) if (val_m and val_m.group(1) is not None) else (val_m.group(2) if val_m else None)
+        quote = quote_m.group(1) if (quote_m and quote_m.group(1) is not None) else None
+        page = int(page_m.group(1)) if (page_m and page_m.group(1) and page_m.group(1) != "null") else None
+        conf = float(conf_m.group(1)) if (conf_m and conf_m.group(1) and conf_m.group(1) != "null") else 1.0
+
+        matches.append({
+            "field_key": k,
+            "value": val,
+            "quote": quote,
+            "page": page,
+            "citations": [{"quote": quote, "page": page}] if (quote and page) else [],
+            "confidence": conf
+        })
+    return matches
+
+
 def parse_json_extractions(raw_content: str) -> List[Dict[str, Any]]:
-    """Parse JSON array or object from raw LLM output, with robust repair for unescaped characters & truncated streams."""
+    """Parse JSON array or object from raw LLM output, with robust multi-tiered fallback & repair."""
     raw = raw_content.strip()
 
     # 1. Clean markdown code fences if present
     match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*(?:```|$)', raw)
     clean_text = match.group(1).strip() if match else raw
 
-    # 2. Try direct parse with strict=False to allow unescaped newlines/tabs in quoted text
-    for strict in (False, True):
-        try:
-            parsed = json.loads(clean_text, strict=strict)
-            if isinstance(parsed, dict) and "extractions" in parsed and isinstance(parsed["extractions"], list):
-                return parsed["extractions"]
-            elif isinstance(parsed, list):
-                return parsed
-        except Exception:
-            pass
+    # Sanitize non-printable control characters except standard whitespace
+    sanitized_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', ' ', clean_text)
+    fixed_text = fix_unescaped_newlines_in_json(sanitized_text)
 
-    # 3. Try completing truncated JSON array/object with strict=False
+    # 2. Try direct parse
+    for text_candidate in (sanitized_text, fixed_text, clean_text):
+        for strict in (False, True):
+            try:
+                parsed = json.loads(text_candidate, strict=strict)
+                if isinstance(parsed, dict) and "extractions" in parsed and isinstance(parsed["extractions"], list):
+                    return parsed["extractions"]
+                elif isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                pass
+
+    # 3. Try completing truncated JSON array/object
     for suffix in [']}', '"}', '"]}', 'null}]}', 'null}]', '}']:
         try:
-            repaired = clean_text + suffix
+            repaired = fixed_text + suffix
             parsed = json.loads(repaired, strict=False)
             if isinstance(parsed, dict) and "extractions" in parsed and isinstance(parsed["extractions"], list):
                 return parsed["extractions"]
@@ -59,13 +126,13 @@ def parse_json_extractions(raw_content: str) -> List[Dict[str, Any]]:
     salvaged = []
     pos = 0
     while True:
-        idx = clean_text.find('"field_key"', pos)
+        idx = fixed_text.find('"field_key"', pos)
         if idx == -1:
             break
-        brace_idx = clean_text.rfind('{', 0, idx)
+        brace_idx = fixed_text.rfind('{', 0, idx)
         if brace_idx != -1:
             try:
-                obj, end_idx = decoder.raw_decode(clean_text, brace_idx)
+                obj, end_idx = decoder.raw_decode(fixed_text, brace_idx)
                 if isinstance(obj, dict) and "field_key" in obj:
                     salvaged.append(obj)
                     pos = end_idx
@@ -74,9 +141,15 @@ def parse_json_extractions(raw_content: str) -> List[Dict[str, Any]]:
                 pass
         pos = idx + len('"field_key"')
 
-    if salvaged:
-        print(f"[REPAIR] Salvaged {len(salvaged)} extraction items from LLM response via incremental decoding.", flush=True)
-        return salvaged
+    # 5. Fallback: Regex extraction
+    regex_salvaged = extract_field_objects_regex(sanitized_text)
+
+    # Pick whichever recovered more field keys
+    best_salvaged = regex_salvaged if len(regex_salvaged) > len(salvaged) else salvaged
+
+    if best_salvaged:
+        print(f"[REPAIR] Salvaged {len(best_salvaged)} extraction items from LLM response (raw_decode: {len(salvaged)}, regex: {len(regex_salvaged)}).", flush=True)
+        return best_salvaged
 
     raise ValueError(f"Could not parse valid JSON from LLM response: {raw[:300]}...")
 

@@ -139,7 +139,7 @@
     "key": "density_measure",
     "label": "Density Measure",
     "category": "3. Study Population",
-    "description": "Extract the breast density classification system and distribution across the cohort. Suggested classes: BI-RADS Density (A/B/C/D), Dense vs Fatty / Non-dense, Quantra / Volpara Automated Metric, Percentage Density, Not Reported, or other.",
+    "description": "Extract the breast density classification system (e.g., BI-RADS A/B/C/D, Dense vs Non-dense) AND the exact distribution breakdown with counts and percentages (%) across the cohort or comparator groups (e.g., BI-RADS A: n (%), B: n (%), C: n (%), D: n (%)).",
     "field_type": "text",
     "order_index": 307
   },
@@ -211,10 +211,11 @@
     "key": "tumor_type_distribution",
     "label": "Number/Distribution of Tumour Types",
     "category": "4. Reference Standard",
-    "description": "Extract counts, proportions, or descriptive breakdown of tumor histopathology (e.g. invasive ductal carcinoma, invasive lobular, DCIS, grade, receptor subtypes).",
+    "description": "Extract the exact counts, numbers, and percentage distributions (%) of all reported tumor types, histopathology categories, and tumor grades (e.g., Invasive Ductal Carcinoma: n (%), Invasive Lobular: n (%), DCIS / Non-invasive: n (%), Grade 1/2/3: n (%), receptor subtypes).",
     "field_type": "text",
     "order_index": 403
   },
+
   {
     "key": "followup_duration",
     "label": "Follow-up Duration",
