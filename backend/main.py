@@ -37,6 +37,22 @@ PAPERS_DIR = os.getenv("PAPERS_DIR", os.path.abspath(os.path.join(os.path.dirnam
 os.makedirs(PAPERS_DIR, exist_ok=True)
 
 
+def get_paper_real_filepath(paper: Optional[PaperDB]) -> Optional[str]:
+    """Resolves paper filepath against PAPERS_DIR or existing path seamlessly."""
+    if not paper or not paper.filepath:
+        return None
+    if os.path.exists(paper.filepath):
+        return paper.filepath
+    if paper.filename:
+        candidate = os.path.join(PAPERS_DIR, paper.filename)
+        if os.path.exists(candidate):
+            return candidate
+    candidate = os.path.join(PAPERS_DIR, os.path.basename(paper.filepath))
+    if os.path.exists(candidate):
+        return candidate
+    return paper.filepath
+
+
 @app.on_event("startup")
 async def startup_event():
     await init_db()
@@ -49,6 +65,14 @@ async def sync_papers_folder(session: AsyncSession):
     """Scans the PAPERS_DIR folder and adds new PDF files to DB."""
     if not os.path.exists(PAPERS_DIR):
         return
+
+    # Fix existing papers with invalid or legacy container filepaths
+    all_papers_res = await session.execute(select(PaperDB))
+    for p in all_papers_res.scalars().all():
+        if not os.path.exists(p.filepath):
+            corrected = os.path.join(PAPERS_DIR, p.filename)
+            if os.path.exists(corrected):
+                p.filepath = corrected
 
     existing_res = await session.execute(select(PaperDB.filename))
     existing_files = set(existing_res.scalars().all())
@@ -71,6 +95,7 @@ async def sync_papers_folder(session: AsyncSession):
             except Exception as e:
                 print(f"Error scanning PDF {fname}: {e}")
     await session.commit()
+
 
 
 def serialize_extraction(ext: ExtractionDB) -> dict:
@@ -219,11 +244,12 @@ async def get_paper(paper_id: int, db: AsyncSession = Depends(get_db)):
 async def get_paper_pdf(paper_id: int, db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(PaperDB).where(PaperDB.id == paper_id))
     paper = res.scalar_one_or_none()
-    if not paper or not os.path.exists(paper.filepath):
+    real_path = get_paper_real_filepath(paper)
+    if not paper or not real_path or not os.path.exists(real_path):
         raise HTTPException(status_code=404, detail="PDF file not found")
     
     return FileResponse(
-        paper.filepath,
+        real_path,
         media_type="application/pdf",
         filename=paper.filename,
         headers={"Content-Disposition": f'inline; filename="{paper.filename}"'}
@@ -239,15 +265,17 @@ async def search_paper_keywords(
 ):
     res = await db.execute(select(PaperDB).where(PaperDB.id == paper_id))
     paper = res.scalar_one_or_none()
-    if not paper or not os.path.exists(paper.filepath):
+    real_path = get_paper_real_filepath(paper)
+    if not paper or not real_path or not os.path.exists(real_path):
         raise HTTPException(status_code=404, detail="Paper or PDF file not found")
 
     result = pdf_extractor.search_pdf_keywords(
-        pdf_path=paper.filepath,
+        pdf_path=real_path,
         query=q,
         case_sensitive=case_sensitive
     )
     result["paper_id"] = paper.id
+
     result["paper_title"] = paper.title
     return result
 
@@ -408,7 +436,8 @@ async def extract_paper(
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
 
-    if not os.path.exists(paper.filepath):
+    pdf_real_path = get_paper_real_filepath(paper)
+    if not pdf_real_path or not os.path.exists(pdf_real_path):
         raise HTTPException(status_code=404, detail=f"PDF file not found at {paper.filepath}")
 
     # Fetch API Key
@@ -448,8 +477,8 @@ async def extract_paper(
 
     try:
         # 1. Extract text with page markers
-        print(f"[EXTRACT] Reading PDF text from {paper.filepath}...", flush=True)
-        paper_text = pdf_extractor.extract_text_for_llm(paper.filepath)
+        print(f"[EXTRACT] Reading PDF text from {pdf_real_path}...", flush=True)
+        paper_text = pdf_extractor.extract_text_for_llm(pdf_real_path)
         print(f"[EXTRACT] Extracted {len(paper_text)} characters from PDF.", flush=True)
 
         # 2. Call OpenRouter LLM
@@ -475,7 +504,7 @@ async def extract_paper(
             confidence = item.get("confidence", 1.0)
 
             # Resolve all citations (single or multiple)
-            resolved_citations, primary_loc = resolve_item_citations(paper.filepath, item, val=val)
+            resolved_citations, primary_loc = resolve_item_citations(pdf_real_path, item, val=val)
             citations_json = json.dumps(resolved_citations) if resolved_citations else None
 
             primary_cit = resolved_citations[0] if resolved_citations else {}
@@ -585,11 +614,12 @@ async def extract_batch_papers(req: Optional[BatchExtractRequest] = None, db: As
     # 4. Extract text from each paper and set status to extracting
     papers_data = []
     for p in papers:
-        if os.path.exists(p.filepath):
+        p_real_path = get_paper_real_filepath(p)
+        if p_real_path and os.path.exists(p_real_path):
             p.status = "extracting"
             p.error_message = None
-            text = pdf_extractor.extract_text_for_llm(p.filepath)
-            papers_data.append({"paper_id": p.id, "paper_text": text, "paper_obj": p})
+            text = pdf_extractor.extract_text_for_llm(p_real_path)
+            papers_data.append({"paper_id": p.id, "paper_text": text, "paper_obj": p, "real_path": p_real_path})
 
     await db.commit()
 
@@ -606,6 +636,7 @@ async def extract_batch_papers(req: Optional[BatchExtractRequest] = None, db: As
         # 6. Save extractions & locate quotes
         for item in papers_data:
             p = item["paper_obj"]
+            p_real_path = item["real_path"]
             extracted_items = results_map.get(p.id, [])
 
             if not extracted_items:
@@ -619,7 +650,7 @@ async def extract_batch_papers(req: Optional[BatchExtractRequest] = None, db: As
                 confidence = ext_data.get("confidence", 1.0)
 
                 # Resolve all citations (single or multiple)
-                resolved_citations, primary_loc = resolve_item_citations(p.filepath, ext_data, val=val)
+                resolved_citations, primary_loc = resolve_item_citations(p_real_path, ext_data, val=val)
                 citations_json = json.dumps(resolved_citations) if resolved_citations else None
 
                 primary_cit = resolved_citations[0] if resolved_citations else {}
@@ -692,8 +723,9 @@ async def update_extraction(extraction_id: int, payload: ExtractionUpdate, db: A
         ext.quote = payload.quote
         paper_res = await db.execute(select(PaperDB).where(PaperDB.id == ext.paper_id))
         paper = paper_res.scalar_one_or_none()
-        if paper and os.path.exists(paper.filepath):
-            loc = pdf_extractor.find_quote_location(paper.filepath, payload.quote, hint_page=payload.page)
+        real_path = get_paper_real_filepath(paper)
+        if paper and real_path and os.path.exists(real_path):
+            loc = pdf_extractor.find_quote_location(real_path, payload.quote, hint_page=payload.page)
             if loc:
                 ext.page = loc["page"]
                 ext.rects = json.dumps(loc["rects"])
@@ -727,11 +759,12 @@ async def add_extraction_citation(
 
     paper_res = await db.execute(select(PaperDB).where(PaperDB.id == ext.paper_id))
     paper = paper_res.scalar_one_or_none()
-    if not paper or not os.path.exists(paper.filepath):
+    real_path = get_paper_real_filepath(paper)
+    if not paper or not real_path or not os.path.exists(real_path):
         raise HTTPException(status_code=404, detail="Underlying paper PDF not found")
 
     # Locate quote in PDF
-    loc = pdf_extractor.find_quote_location(paper.filepath, quote=payload.quote, hint_page=payload.page)
+    loc = pdf_extractor.find_quote_location(real_path, quote=payload.quote, hint_page=payload.page)
     new_citation = {
         "quote": payload.quote.strip(),
         "page": loc.get("page") if loc else payload.page,
